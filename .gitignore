@@ -1,0 +1,27 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Virtual env
+venv/
+.env/
+
+# Models
+models/
+*.pt
+*.pth
+
+# Videos & outputs
+VideoData/
+output/
+
+# YOLO / training artifacts
+runs/
+training/
+
+# Stubs / intermediate files
+stubs/
+
+# Editor / OS
+.vscode/
+.DS_Store

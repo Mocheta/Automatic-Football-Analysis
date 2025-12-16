@@ -1,0 +1,35 @@
+================================================================================
+FOOTBALL MATCH - PASS ANALYSIS
+================================================================================
+
+Total Passes Detected: 3
+
+Team 1 Passes: 0
+Team 2 Passes: 3
+
+Average Pass Duration: 7.7 frames
+Average Gap Between Possessions: 6.7 frames
+
+================================================================================
+
+Pass #1:
+  Frame: 641
+  From Player: 355 -> To Player: 372
+  Team: 2
+  Duration: 9 frames
+  Gap (no possession): 8 frames
+--------------------------------------------------------------------------------
+Pass #2:
+  Frame: 674
+  From Player: 331 -> To Player: 53
+  Team: 2
+  Duration: 8 frames
+  Gap (no possession): 7 frames
+--------------------------------------------------------------------------------
+Pass #3:
+  Frame: 727
+  From Player: 468 -> To Player: 278
+  Team: 2
+  Duration: 6 frames
+  Gap (no possession): 5 frames
+--------------------------------------------------------------------------------
