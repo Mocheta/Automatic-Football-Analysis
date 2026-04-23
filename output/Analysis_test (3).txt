@@ -1,0 +1,27 @@
+================================================================================
+AI MATCH ANALYSIS  (powered by Claude)
+================================================================================
+
+## Match Overview
+
+Team 2 dominated territorially with 61.5% possession against Team 1's 38.5%, dictating the tempo from their 4-4-2 structure. However, possession did not translate into penetration: Team 2 failed to register a single shot, while Team 1, despite seeing less of the ball, manufactured 2 shots (1 on target) from their more direct 4-3-3. This disconnect suggests Team 2 circulated the ball in safe areas without breaking lines, while Team 1's counter-attacking transitions were sharper and more decisive in the final third.
+
+The passing data reveals a scrappy, transition-heavy contest. Neither side passed with authority — Team 1 completed just 11 passes at 42.3% accuracy, and Team 2 managed 13 at 48.1% — with a combined 29 turnovers indicating frequent duels and loose control. The short average pass duration of 8.4 frames reinforces a picture of quick, hurried exchanges rather than sustained build-up. Team 1's Player 67 (3.3s on ball) and Team 2's Player 13 (3.0s) and Player 7 (2.0s) were the primary ball-carriers, while the wide, high-speed runners on both sides — Team 1's Players 6, 14, and 19 all hitting 34+ km/h, and Team 2's Players 5 and 9 matching that — were clearly used as vertical outlets.
+
+Physically, Team 2 appears to have run more as a collective, with five players covering 44m or more (Players 5, 9, 10, 11, 113), consistent with their possession dominance and pressing demands in the 4-4-2. Team 1's workload was more concentrated on Player 4 (54m) and Player 19 (49m), the latter combining endurance with a 34.4 km/h top speed — a profile ideally suited to the wide channels of a 4-3-3 in transition.
+
+## Tips for Team 1
+
+- Embrace the counter-attacking identity: with only 38.5% possession but 2 shots to Team 2's 0, double down on fast vertical releases to Players 6, 14, and 19 (all 34+ km/h) rather than trying to outpass a dominant opponent.
+- Improve ball retention in the middle third — 42.3% pass accuracy and 15 turnovers are unsustainable. Use Player 42 (0.8s on ball) as a deeper pivot to stabilize possession before launching attacks.
+- Reduce reliance on Player 67, who held the ball 3.3s but covered only 13m. Distributing possession duties more evenly will prevent opponents from pressing a single carrier into turnovers.
+- Exploit the flanks in the 4-3-3: Player 4 covered 54m, the most on the team — pair his endurance with the pace of Player 19 (49m, 34.4 km/h) for overlapping runs against a 4-4-2 that can be stretched wide.
+- Keep forcing Team 2 into long build-ups; their 61.5% possession produced zero shots, so a compact mid-block that concedes sterile possession is clearly working and should be maintained.
+
+## Tips for Team 2
+
+- Convert possession into penetration: 61.5% possession and 0 shots is a damning combination. Instruct the front two to make runs in behind rather than coming short — the pace of Players 5 and 9 (34.6 and 35.0 km/h) is underutilized as off-ball threats.
+- Shorten possession by Player 13 (3.0s on ball) and Player 7 (2.0s). Quicker one- and two-touch play will raise the 48.1% pass accuracy and disorganize Team 1's defensive shape before it resets.
+- In the 4-4-2, push the wide midfielders (likely Players 11 and 113, who covered 44m and 37m) higher to overload Team 1's fullbacks and create crossing opportunities — the current setup is generating zero shots despite controlling the ball.
+- Cut out the 14 turnovers by adding a third-man runner between the lines; currently the midfield two struggle to progress the ball against Team 1's 4-3-3 midfield triangle.
+- Press Team 1's restarts harder — they completed only 11 passes at 42.3% accuracy, meaning aggressive counter-pressing after turnovers should yield immediate chances that the team is currently failing to create.

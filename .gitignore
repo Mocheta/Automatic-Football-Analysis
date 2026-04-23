@@ -11,9 +11,14 @@ models/
 *.pt
 *.pth
 
-# Videos & outputs
-VideoData/
-output/
+# Videos & outputs (exclude all except sample files)
+VideoData/*
+!VideoData/test (3).mp4
+output/*
+!output/output_test (3)_video.mp4
+!output/Report_test (3).pdf
+!output/Stats_test (3).txt
+!output/Analysis_test (3).txt
 
 # YOLO / training artifacts
 runs/
