@@ -33,7 +33,7 @@ class TeamAssigner:
 
 
     def assign_team_colors(self, frame, player_detections):
-        # Implementation for assigning team colors based on player detections
+        
         player_colors = []
 
         for _, player_detection in player_detections.items():

@@ -1,30 +1,35 @@
+import argparse
+import os
 from utils import read_video, save_video
 from track import Tracker
-import cv2
 import numpy as np
 from team_assigner import TeamAssigner
 from player_ball_assigner import PlayerBallAssigner
 from camera_movement import CameraMovement
 from view_transformer import ViewTransformer
-from development_and_analysis import SpeedAndDistance_Detector, PassDetector
+from development_and_analysis import SpeedAndDistance_Detector, PassDetector, FormationDetector, ShotDetector, generate_report
 
-def main():
+def main(video_path: str):
+    name = os.path.splitext(os.path.basename(video_path))[0]
+
     # Read video
-    video_frames = read_video('VideoData/test+pase.mp4')
+    video_frames = read_video(video_path)
 
     # Initialize tracker
-    tracker = Tracker('models/bestm.pt')
+    tracker = Tracker('models/best11x.pt')
 
-    tracks = tracker.get_object_tracks(video_frames, read_from_stub=True, stub_path='stubs/testpase_stub.pkl')
+    tracks = tracker.get_object_tracks(video_frames, read_from_stub=True, stub_path=f'stubs/{name}_stub.pkl')
 
     # Get positions
     tracker.add_position_to_track(tracks)
 
     # Adjust for camera movement
     camera_movement_detector = CameraMovement(video_frames[0])
-    camera_movement_per_frame = camera_movement_detector.get_camera_movement(video_frames, 
-                                                                    read_from_stub=True, 
-                                                                    stub_path='stubs/testpase_camera_movement_stub.pkl')
+    camera_movement_per_frame = camera_movement_detector.get_camera_movement(
+        video_frames,
+        read_from_stub=True,
+        stub_path=f'stubs/{name}_camera_movement_stub.pkl'
+    )
     camera_movement_detector.add_adjust_position_to_tracks(tracks, camera_movement_per_frame)
 
     # Transform to top-down view
@@ -65,17 +70,44 @@ def main():
 
     team_ball_control = np.array(team_ball_control)
 
-    # Detect passes and add to tracks
+    # Detect passes, formations, shots
     pass_detector = PassDetector()
     pass_detector.detect_passes(tracks)
-    pass_detector.save_passes_to_file('output/passes.txt')
 
-    # Output
+    formation_detector = FormationDetector()
+    formation_detector.detect_formations(tracks)
+
+    shot_detector = ShotDetector()
+    shot_detector.detect_shots(tracks)
+
+    # Save stats and generate LLM analysis
+    stats_file = f'output/Stats_{name}.txt'
+    pass_detector.save_stats_to_file(stats_file, formation_detector, shot_detector, tracks, team_ball_control)
+
+    total_frames = len(team_ball_control)
+    pass_stats = pass_detector.get_pass_statistics()
+    pass_stats.update(pass_detector.get_team_stats(tracks))
+
+    structured_data = {
+        'possession': {
+            'team_1_pct': float((team_ball_control == 1).sum() / total_frames * 100),
+            'team_2_pct': float((team_ball_control == 2).sum() / total_frames * 100),
+        },
+        'formations': formation_detector.get_statistics(),
+        'shots': shot_detector.get_statistics(),
+        'passes': pass_stats,
+        'player_stats': pass_detector.get_player_stats(tracks),
+    }
+    generate_report(stats_file, structured_data=structured_data)
+
+    # Output video
     speed_and_distance_detector.draw_speed_and_distance(video_frames, tracks)
-
     output_video_frames = tracker.draw_annotations(video_frames, tracks, team_ball_control)
-
-    save_video(output_video_frames, 'output/outputpase_video.mp4')
+    save_video(output_video_frames, f'output/output_{name}_video.mp4')
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Football match analysis pipeline")
+    parser.add_argument("video", nargs="?", default="VideoData/test (3).mp4",
+                        help="Path to input video file")
+    args = parser.parse_args()
+    main(args.video)

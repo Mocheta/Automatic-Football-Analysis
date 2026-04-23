@@ -3,6 +3,9 @@ import sys
 sys.path.append('../')
 from utils import measure_distance ,get_foot_position
 
+MAX_SPEED_KMH = 36      # ~human sprinting ceiling for football players
+SPRINT_THRESHOLD_KMH = 25  # high-intensity run threshold
+
 class SpeedAndDistance_Detector():
     def __init__(self):
         self.frame_window=5
@@ -33,12 +36,16 @@ class SpeedAndDistance_Detector():
                     speed_meteres_per_second = distance_covered/time_elapsed
                     speed_km_per_hour = speed_meteres_per_second*3.6
 
+                    # discard physically impossible readings (noise / bad detections)
+                    if speed_km_per_hour > MAX_SPEED_KMH:
+                        continue
+
                     if object not in total_distance:
                         total_distance[object]= {}
-                    
+
                     if track_id not in total_distance[object]:
                         total_distance[object][track_id] = 0
-                    
+
                     total_distance[object][track_id] += distance_covered
 
                     for frame_num_batch in range(frame_num,last_frame):
