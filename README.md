@@ -23,9 +23,11 @@ The system processes a raw match video and outputs:
 - Automatic team assignment via **K-means color clustering**
 - Ball possession tracking per player and per team
 - Pass detection, turnover detection, and pass accuracy calculation
-- Shot detection with on-target / off-target classification
+- Shot detection with on-target / off-target classification and goal detection
+- Set-piece detection — corners, throw-ins, free kicks, and penalties
 - Formation detection (e.g. 4-3-3, 5-2-3) per team
-- Per-player speed (km/h) and distance (m) metrics
+- Per-player speed (km/h), distance (m), and sprint-count metrics
+- Confidence-gated tracking overlays — only high-confidence ball and possession markers are drawn
 - AI-generated match overview and tactical recommendations via **Claude API**
 - Professional **PDF report** with charts and player performance tables
 
@@ -55,6 +57,7 @@ The system processes a raw match video and outputs:
 │   ├── pass_detector.py
 │   ├── shot_detector.py
 │   ├── formation_detector.py
+│   ├── set_piece_detector.py        # Corners, throw-ins, free kicks, penalties
 │   ├── llm_analyst.py               # Claude API integration
 │   └── pdf_reporter.py              # PDF report generation
 └── utils/
@@ -106,7 +109,7 @@ ANTHROPIC_API_KEY=your-api-key-here
 python main.py [video_path]
 ```
 
-- `video_path` is optional. Defaults to `VideoData/test (3).mp4`.
+- `video_path` is optional. Defaults to `VideoData/test_goal.mp4`.
 
 **Example:**
 
@@ -134,6 +137,7 @@ All outputs are saved to the `output/` directory, named after the input video fi
 - Input video is assumed to be broadcast format (1920×1080) at 24 fps.
 - Tracking results are cached in `stubs/` as `.pkl` files — delete them to force re-detection.
 - The pitch dimensions used for the perspective transform are 68m × 23.32m (standard half-pitch view).
+- Only the AI analysis step requires an internet connection (Anthropic API); detection, tracking, statistics, and the annotated video all run fully offline.
 
 ---
 
