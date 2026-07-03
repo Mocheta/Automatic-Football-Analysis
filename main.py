@@ -7,7 +7,7 @@ from team_assigner import TeamAssigner
 from player_ball_assigner import PlayerBallAssigner
 from camera_movement import CameraMovement
 from view_transformer import ViewTransformer
-from development_and_analysis import SpeedAndDistance_Detector, PassDetector, FormationDetector, ShotDetector, generate_report
+from development_and_analysis import SpeedAndDistance_Detector, PassDetector, FormationDetector, ShotDetector, SetPieceDetector, generate_report
 
 def main(video_path: str):
     name = os.path.splitext(os.path.basename(video_path))[0]
@@ -18,7 +18,7 @@ def main(video_path: str):
     # Initialize tracker
     tracker = Tracker('models/best11x.pt')
 
-    tracks = tracker.get_object_tracks(video_frames, read_from_stub=True, stub_path=f'stubs/{name}_stub.pkl')
+    tracks = tracker.get_object_tracks(video_frames, read_from_stub=False, stub_path=f'stubs/{name}_stub.pkl')
 
     # Get positions
     tracker.add_position_to_track(tracks)
@@ -27,7 +27,7 @@ def main(video_path: str):
     camera_movement_detector = CameraMovement(video_frames[0])
     camera_movement_per_frame = camera_movement_detector.get_camera_movement(
         video_frames,
-        read_from_stub=True,
+        read_from_stub=False,
         stub_path=f'stubs/{name}_camera_movement_stub.pkl'
     )
     camera_movement_detector.add_adjust_position_to_tracks(tracks, camera_movement_per_frame)
@@ -56,11 +56,15 @@ def main(video_path: str):
     player_assigner = PlayerBallAssigner()
     team_ball_control = []
     for frame_idx, player_track in enumerate(tracks['players']):
-        ball_bbox = tracks['ball'][frame_idx][1]['bbox']
-        assigned_player = player_assigner.assign_ball_to_player(player_track, ball_bbox)
+        ball_entry = tracks['ball'][frame_idx].get(1, {})
+        ball_bbox = ball_entry.get('bbox', [])
+        ball_conf = float(ball_entry.get('confidence', 0.0))
+        assigned_player, possession_conf = player_assigner.assign_ball_to_player(player_track, ball_bbox)
 
         if assigned_player != -1:
             tracks['players'][frame_idx][assigned_player]['has_ball'] = True
+            # Overlay confidence is gated by both detection quality and proximity clarity.
+            tracks['players'][frame_idx][assigned_player]['has_ball_confidence'] = min(ball_conf, possession_conf)
             team_ball_control.append(tracks['players'][frame_idx][assigned_player]['team'])
         else:
             if len(team_ball_control) > 0:
@@ -80,9 +84,13 @@ def main(video_path: str):
     shot_detector = ShotDetector()
     shot_detector.detect_shots(tracks)
 
+    set_piece_detector = SetPieceDetector()
+    set_piece_detector.detect(tracks, camera_movement_per_frame=camera_movement_per_frame)
+
     # Save stats and generate LLM analysis
     stats_file = f'output/Stats_{name}.txt'
-    pass_detector.save_stats_to_file(stats_file, formation_detector, shot_detector, tracks, team_ball_control)
+    pass_detector.save_stats_to_file(stats_file, formation_detector, shot_detector, tracks, team_ball_control,
+                                     set_piece_detector=set_piece_detector)
 
     total_frames = len(team_ball_control)
     pass_stats = pass_detector.get_pass_statistics()
@@ -96,8 +104,10 @@ def main(video_path: str):
         'formations': formation_detector.get_statistics(),
         'shots': shot_detector.get_statistics(),
         'passes': pass_stats,
+        'set_pieces': set_piece_detector.get_statistics(),
         'player_stats': pass_detector.get_player_stats(tracks),
     }
+
     generate_report(stats_file, structured_data=structured_data)
 
     # Output video
@@ -107,7 +117,7 @@ def main(video_path: str):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Football match analysis pipeline")
-    parser.add_argument("video", nargs="?", default="VideoData/test (3).mp4",
+    parser.add_argument("video", nargs="?", default="VideoData/test_goal.mp4",
                         help="Path to input video file")
     args = parser.parse_args()
     main(args.video)

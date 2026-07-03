@@ -164,7 +164,8 @@ class PassDetector:
 
     def save_stats_to_file(self, filename='output/Stats.txt',
                            formation_detector=None, shot_detector=None,
-                           tracks=None, team_ball_control=None):
+                           tracks=None, team_ball_control=None,
+                           set_piece_detector=None):
 
         pass_stats = self.get_pass_statistics()
 
@@ -207,6 +208,9 @@ class PassDetector:
 
             if shot_detector is not None:
                 shot_stats = shot_detector.get_statistics()
+                f.write(f"Total Goals Scored:   {shot_stats['total_goals']}\n")
+                f.write(f"  Team 1 Goals:       {shot_stats['team_1_goals']}\n")
+                f.write(f"  Team 2 Goals:       {shot_stats['team_2_goals']}\n\n")
                 f.write(f"Total Shots Detected: {shot_stats['total_shots']}\n\n")
                 f.write(f"Team 1 Shots: {shot_stats['team_1_shots']}\n")
                 f.write(f"  On Target:  {shot_stats['team_1_on_target']}\n")
@@ -218,17 +222,49 @@ class PassDetector:
 
                 if shot_detector.shots:
                     for idx, shot_info in enumerate(shot_detector.shots, 1):
-                        f.write(f"Shot #{idx}:\n")
+                        goal_marker = "  [GOAL]" if shot_info.get('is_goal') else ""
+                        f.write(f"Shot #{idx}:{goal_marker}\n")
                         f.write(f"  Frame:          {shot_info['frame']}\n")
                         f.write(f"  Player ID:      {shot_info['player_id']}\n")
                         f.write(f"  Team:           {shot_info['team']}\n")
                         f.write(f"  Classification: {shot_info['classification'].replace('_', ' ').title()}\n")
+                        f.write(f"  Goal:           {'Yes' if shot_info.get('is_goal') else 'No'}\n")
                         f.write(f"  Ball Speed:     {shot_info['ball_speed_px']} px/frame\n")
                         f.write("-" * 80 + "\n")
                 else:
                     f.write("No shots detected in this match.\n")
             else:
                 f.write("Shot detection was not run.\n")
+
+            f.write("\n")
+
+            # ── SET PIECE ANALYSIS ─────────────────────────────────────────────
+            f.write("=" * 80 + "\n")
+            f.write("FOOTBALL MATCH - SET PIECE ANALYSIS\n")
+            f.write("=" * 80 + "\n\n")
+
+            if set_piece_detector is not None:
+                sp_stats = set_piece_detector.get_statistics()
+                f.write(f"Total Set Pieces: {sp_stats['total_set_pieces']}\n\n")
+                f.write(f"{'Type':<14}{'Team 1':<10}{'Team 2':<10}{'Total':<10}\n")
+                f.write(f"{'-'*44}\n")
+                f.write(f"{'Corners':<14}{sp_stats['team_1_corners']:<10}{sp_stats['team_2_corners']:<10}{sp_stats['corners']:<10}\n")
+                f.write(f"{'Throw-ins':<14}{sp_stats['team_1_throw_ins']:<10}{sp_stats['team_2_throw_ins']:<10}{sp_stats['throw_ins']:<10}\n")
+                f.write(f"{'Free Kicks':<14}{sp_stats['team_1_free_kicks']:<10}{sp_stats['team_2_free_kicks']:<10}{sp_stats['free_kicks']:<10}\n")
+                f.write(f"{'Penalties':<14}{sp_stats['team_1_penalties']:<10}{sp_stats['team_2_penalties']:<10}{sp_stats['penalties']:<10}\n\n")
+
+                if set_piece_detector.events:
+                    f.write("=" * 80 + "\n\n")
+                    for idx, ev in enumerate(set_piece_detector.events, 1):
+                        side = f" ({ev['side']})" if ev.get('side') else ""
+                        team = ev.get('team') if ev.get('team') is not None else '?'
+                        f.write(f"Set Piece #{idx}: {ev['type'].replace('_', ' ').title()}{side}\n")
+                        f.write(f"  Frame:        {ev['frame']}\n")
+                        f.write(f"  Team:         {team}\n")
+                        f.write(f"  Ball Position: ({ev['ball_position'][0]:.0f}, {ev['ball_position'][1]:.0f})\n")
+                        f.write("-" * 80 + "\n")
+            else:
+                f.write("Set piece detection was not run.\n")
 
             f.write("\n")
 

@@ -4,7 +4,10 @@ __pycache__/
 
 # Virtual env
 venv/
-.env/
+
+# Secrets
+.env
+.env.*
 
 # Models
 models/
@@ -30,3 +33,6 @@ stubs/
 # Editor / OS
 .vscode/
 .DS_Store
+
+# Thesis documents (kept local)
+Paper/

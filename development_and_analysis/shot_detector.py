@@ -10,6 +10,8 @@ class ShotDetector:
         self.max_frames_since_possession = 10   # frames after losing ball to still count as a shot
         self.shot_debounce_frames = 30          # minimum frames between two detected shots
         self.teammate_reception_window = 40     # if a teammate receives within this many frames, it was a pass
+        self.goal_lookahead_frames = 75         # frames after a shot to scan for the ball reaching the goal mouth
+        self.goal_proximity_px = 60             # how close to the goal line the ball must come to count as a goal
 
         # Goal mouth bounds in pixel coordinates (approximate for 1920x1080 broadcast)
         self.left_goal  = {'x': 0,    'y1': 400, 'y2': 680}
@@ -62,6 +64,24 @@ class ShotDetector:
         if not speeds:
             return False
         return (sum(speeds) / len(speeds)) >= min_avg_speed
+
+    def _is_goal(self, ball_positions, shot_frame):
+        """Returns True if the ball reaches the goal mouth area within the lookahead window
+        after the shot. Independent of the on/off-target classification, since that one
+        relies on a noisy two-point extrapolation."""
+        end_frame = min(shot_frame + self.goal_lookahead_frames, len(ball_positions))
+        for f in range(shot_frame, end_frame):
+            pos = ball_positions[f]
+            if pos is None:
+                continue
+            x, y = pos
+            if (x <= self.left_goal['x'] + self.goal_proximity_px and
+                    self.left_goal['y1'] <= y <= self.left_goal['y2']):
+                return True
+            if (x >= self.right_goal['x'] - self.goal_proximity_px and
+                    self.right_goal['y1'] <= y <= self.right_goal['y2']):
+                return True
+        return False
 
     def _teammate_receives_ball(self, tracks, frame_idx, kicker_team, window):
         """Returns True if a player on the same team receives the ball within `window` frames,
@@ -125,6 +145,9 @@ class ShotDetector:
                 continue
 
             classification = self._classify_shot(p_prev, p_curr)
+            is_goal = self._is_goal(ball_positions, frame_idx)
+            if is_goal:
+                classification = 'on_target'
 
             self.shots.append({
                 'frame': frame_idx,
@@ -132,6 +155,7 @@ class ShotDetector:
                 'team': last_player_team,
                 'ball_speed_px': round(ball_speed, 2),
                 'classification': classification,
+                'is_goal': is_goal,
             })
 
         return self.shots
@@ -139,6 +163,9 @@ class ShotDetector:
     def get_statistics(self):
         if not self.shots:
             return {
+                'total_goals': 0,
+                'team_1_goals': 0,
+                'team_2_goals': 0,
                 'total_shots': 0,
                 'team_1_shots': 0,
                 'team_1_on_target': 0,
@@ -150,8 +177,13 @@ class ShotDetector:
 
         t1 = [s for s in self.shots if s['team'] == 1]
         t2 = [s for s in self.shots if s['team'] == 2]
+        t1_goals = sum(1 for s in t1 if s.get('is_goal'))
+        t2_goals = sum(1 for s in t2 if s.get('is_goal'))
 
         return {
+            'total_goals': t1_goals + t2_goals,
+            'team_1_goals': t1_goals,
+            'team_2_goals': t2_goals,
             'total_shots': len(self.shots),
             'team_1_shots': len(t1),
             'team_1_on_target':  sum(1 for s in t1 if s['classification'] == 'on_target'),

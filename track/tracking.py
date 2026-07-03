@@ -7,9 +7,13 @@ import cv2
 import pandas as pd
 from utils.bbox_utils import get_center_of_bbox, get_bbox_width, get_foot_position
 
+BALL_OVERLAY_CONF_THRESHOLD = 0.50
+POSSESSION_OVERLAY_CONF_THRESHOLD = 0.50
+
+
 class Tracker:
     def __init__(self, model_path):
-        self.model = YOLO(model_path) 
+        self.model = YOLO(model_path)
         self.tracker =  sv.ByteTrack()
 
     def add_position_to_track(self, tracks):
@@ -24,25 +28,40 @@ class Tracker:
                     tracks[object][frame_idx][track_id]['position'] = position
 
 
-    def interpolate_ball_positions(self, ball_tracks):
-        ball_tracks = [x.get(1,{}).get('bbox',[]) for x in ball_tracks]
-        df_ball_tracks = pd.DataFrame(ball_tracks, columns=['x1','y1','x2','y2'])
+    def interpolate_ball_positions(self, ball_tracks, max_jump_px=250):
+        raw_bboxes = [x.get(1, {}).get('bbox', []) for x in ball_tracks]
+        # Default to 1.0 so legacy stubs without confidence still render overlays.
+        confidences = [float(x.get(1, {}).get('confidence', 1.0)) if x.get(1) else 0.0
+                       for x in ball_tracks]
+        df_ball_tracks = pd.DataFrame(raw_bboxes, columns=['x1', 'y1', 'x2', 'y2'])
+
+        cx = (df_ball_tracks['x1'] + df_ball_tracks['x2']) / 2
+        cy = (df_ball_tracks['y1'] + df_ball_tracks['y2']) / 2
+        last_cx, last_cy = None, None
+        for i in range(len(df_ball_tracks)):
+            if pd.isna(cx.iloc[i]):
+                confidences[i] = 0.0
+                continue
+            if last_cx is not None:
+                if ((cx.iloc[i] - last_cx) ** 2 + (cy.iloc[i] - last_cy) ** 2) ** 0.5 > max_jump_px:
+                    df_ball_tracks.iloc[i] = [float('nan')] * 4
+                    confidences[i] = 0.0
+                    continue
+            last_cx, last_cy = cx.iloc[i], cy.iloc[i]
 
         df_ball_tracks = df_ball_tracks.interpolate()
         df_ball_tracks = df_ball_tracks.bfill()
 
-        ball_tracks = [{1:{"bbox":x}} for x in df_ball_tracks.to_numpy().tolist()]
-
-        return ball_tracks
+        return [{1: {"bbox": row, "confidence": confidences[i]}}
+                for i, row in enumerate(df_ball_tracks.to_numpy().tolist())]
 
     def detect_frames(self, frames):
         batch_size = 20
         detections = []
 
         for i in range(0, len(frames), batch_size):
-            detections_batch = self.model.predict(frames[i:i + batch_size], conf = 0.1)
+            detections_batch = self.model.predict(frames[i:i + batch_size], conf=0.1, imgsz=720)
             detections += detections_batch
-            
 
         return detections
 
@@ -61,6 +80,11 @@ class Tracker:
             "referees": [],
             "ball": []
         }
+
+        last_ball_center = None
+        last_ball_frame = -1
+        STALE_BALL_FRAMES = 30          # after this many missed frames, drop the continuity prior
+        BALL_DIST_PENALTY_PX = 500.0    # distance at which a candidate loses ~1.0 of "score" vs confidence
 
         for frame_idx, detection in enumerate(detections):
             cls_names = detection.names
@@ -92,12 +116,33 @@ class Tracker:
                     tracks["referees"][frame_idx][track_id] = {"bbox": bbox}
                 
 
+            ball_candidates = []
             for frame_detection in detection_supervision:
                 bbox = frame_detection[0].tolist()
+                confidence = frame_detection[2]
                 class_id = frame_detection[3]
-
                 if class_id == cls_names_inv['ball']:
-                    tracks["ball"][frame_idx][1] = {"bbox": bbox}                
+                    ball_candidates.append((bbox, confidence))
+
+            if ball_candidates:
+                stale = (last_ball_center is None or
+                         frame_idx - last_ball_frame > STALE_BALL_FRAMES)
+                if stale:
+                    best_bbox, best_conf = max(ball_candidates, key=lambda c: c[1])
+                else:
+                    lcx, lcy = last_ball_center
+                    def _score(cand):
+                        b, conf = cand
+                        cx = (b[0] + b[2]) / 2
+                        cy = (b[1] + b[3]) / 2
+                        dist = ((cx - lcx) ** 2 + (cy - lcy) ** 2) ** 0.5
+                        return conf - dist / BALL_DIST_PENALTY_PX
+                    best_bbox, best_conf = max(ball_candidates, key=_score)
+
+                tracks["ball"][frame_idx][1] = {"bbox": best_bbox, "confidence": float(best_conf)}
+                last_ball_center = ((best_bbox[0] + best_bbox[2]) / 2,
+                                    (best_bbox[1] + best_bbox[3]) / 2)
+                last_ball_frame = frame_idx
                 
         if stub_path is not None:
             with open(stub_path, 'wb') as f:
@@ -215,14 +260,16 @@ class Tracker:
                 color = player.get("team_color", (255,255,255))
                 frame = self.draw_ellipse(frame, player["bbox"], color, track_id)
 
-                if player.get("has_ball", False):
+                if (player.get("has_ball", False) and
+                        player.get("has_ball_confidence", 0.0) >= POSSESSION_OVERLAY_CONF_THRESHOLD):
                     frame = self.draw_triangle(frame, player["bbox"], (0,255,0))
 
             for track_id, referee in referee_dict.items():
                 frame = self.draw_ellipse(frame, referee["bbox"],(255, 0, 0))
-            
+
             for track_id, ball in ball_dict.items():
-                frame = self.draw_triangle(frame, ball["bbox"], (0, 255, 255))
+                if ball.get("confidence", 0.0) >= BALL_OVERLAY_CONF_THRESHOLD:
+                    frame = self.draw_triangle(frame, ball["bbox"], (0, 255, 255))
 
             frame = self.draw_team_possession(frame, frame_idx, team_ball_control)
 

@@ -144,7 +144,7 @@ All outputs are saved to the `output/` directory, named after the input video fi
 | Object detection | YOLOv11x fine-tuned on football footage (4 classes: ball, player, goalkeeper, referee) |
 | Tracking | ByteTrack via the `supervision` library |
 | Team assignment | K-means clustering on player crop colors |
-| AI analysis | Anthropic Claude (`claude-opus-4-7`) with extended thinking |
+| AI analysis | Anthropic Claude (`claude-opus-4-6`) with extended thinking |
 
 ---
 

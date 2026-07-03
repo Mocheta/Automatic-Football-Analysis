@@ -44,6 +44,7 @@ class CameraMovement:
         if read_from_stub and stub_path is not None and os.path.exists(stub_path):
             with open(stub_path, 'rb') as f:
                 camera_movements = pickle.load(f)
+            return camera_movements
 
         camera_movements = [[0, 0]]*len(video_frames)
 

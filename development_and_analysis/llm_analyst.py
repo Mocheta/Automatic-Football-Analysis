@@ -37,10 +37,25 @@ def _build_prompt(data: dict) -> str:
 
     s = data.get('shots', {})
     lines.append(
+        f"GOALS\n"
+        f"  Team 1: {s.get('team_1_goals', 0)}\n"
+        f"  Team 2: {s.get('team_2_goals', 0)}\n"
+    )
+    lines.append(
         f"SHOTS\n"
         f"  Team 1: {s.get('team_1_shots', 0)} shots  ({s.get('team_1_on_target', 0)} on target, {s.get('team_1_off_target', 0)} off target)\n"
         f"  Team 2: {s.get('team_2_shots', 0)} shots  ({s.get('team_2_on_target', 0)} on target, {s.get('team_2_off_target', 0)} off target)\n"
     )
+
+    sp = data.get('set_pieces', {})
+    if sp:
+        lines.append(
+            f"SET PIECES\n"
+            f"  Corners    — Team 1: {sp.get('team_1_corners', 0)}, Team 2: {sp.get('team_2_corners', 0)}\n"
+            f"  Throw-ins  — Team 1: {sp.get('team_1_throw_ins', 0)}, Team 2: {sp.get('team_2_throw_ins', 0)}\n"
+            f"  Free kicks — Team 1: {sp.get('team_1_free_kicks', 0)}, Team 2: {sp.get('team_2_free_kicks', 0)}\n"
+            f"  Penalties  — Team 1: {sp.get('team_1_penalties', 0)}, Team 2: {sp.get('team_2_penalties', 0)}\n"
+        )
 
     ps = data.get('passes', {})
     lines.append(
@@ -82,9 +97,9 @@ def generate_report(stats_filepath: str, structured_data: dict = None,
     if output_filepath is None:
         output_filepath = stats_filepath.replace('Stats_', 'Analysis_')
 
-    client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+    client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY from the environment (.env)
     with client.messages.stream(
-        model="claude-opus-4-7",
+        model="claude-opus-4-6",
         max_tokens=2048,
         thinking={"type": "adaptive"},
         system=SYSTEM_PROMPT,
